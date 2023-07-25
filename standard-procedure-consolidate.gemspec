@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "lib/standard/procedure/consolidate/version"
+require_relative "lib/consolidate/version"
 
 Gem::Specification.new do |spec|
   spec.name = "standard-procedure-consolidate"
-  spec.version = Standard::Procedure::Consolidate::VERSION
+  spec.version = Consolidate::VERSION
   spec.authors = ["Rahoul Baruah"]
   spec.email = ["rahoulb@standardprocedure.app"]
 
@@ -31,4 +31,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rubyzip"
+  spec.add_dependency "nokogiri"
 end

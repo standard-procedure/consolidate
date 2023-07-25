@@ -15,11 +15,13 @@ It's pretty simple, so it probably won't work with complex Word documents, but i
 
 ```ruby
 Consolidate::Docx::Merge.open "/path/to/docx" do |merge|
-  merge.data name: "Alice Aadvark", company: "TinyCo", job_title: "CEO"
+  merge.data "Name" => "Alice Aadvark", "Company" => "TinyCo", "Job_Title" => "CEO"
   merge.write_to "/path/to/output.docx"
 end
 
 ```
+
+NOTE: The merge fields are case-sensitive - which is why they should be supplied as strings (using the older `{ "key" => "value" }` style ruby hash).
 
 ## Development
 

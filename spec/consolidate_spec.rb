@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe Standard::Procedure::Consolidate do
+RSpec.describe Consolidate do
   it "has a version number" do
-    expect(Standard::Procedure::Consolidate::VERSION).not_to be nil
+    expect(Consolidate::VERSION).to_not be nil
   end
 end

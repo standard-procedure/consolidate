@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "standard/procedure/consolidate"
+require "consolidate"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
