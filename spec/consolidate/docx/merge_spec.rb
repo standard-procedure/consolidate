@@ -7,6 +7,14 @@ RSpec.describe Consolidate::Docx::Merge do
   let(:file_path) { "spec/files/mm.docx" }
   let(:data) { {"Name" => "Alice Aadvark", "Company" => "TinyCo", "Package" => "Corporate"} }
 
+  it "lists the merge fields within the document" do
+    result = []
+    Consolidate::Docx::Merge.open(file_path) do |merge|
+      result = merge.examine
+    end
+    expect(result).to eq(["Name", "Company", "Package"])
+  end
+
   it "performs a mailmerge and forces Word settings" do
     Consolidate::Docx::Merge.open(file_path) do |merge|
       merge.data data
