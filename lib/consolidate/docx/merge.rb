@@ -17,11 +17,13 @@ module Consolidate
       def data fields = {}
         fields = fields.transform_keys(&:to_s)
 
-        result = doc.dup
-        result = substitute_style_one_with result, fields
-        result = substitute_style_two_with result, fields
+        @documents.each do |name, document|
+          result = document.dup
+          result = substitute_style_one_with result, fields
+          result = substitute_style_two_with result, fields
 
-        @output["word/document.xml"] = result.serialize save_with: 0
+          @output[name] = result.serialize save_with: 0
+        end
       end
 
       def write_to path
@@ -38,19 +40,22 @@ module Consolidate
 
       attr_reader :zip
       attr_reader :xml
-      attr_reader :doc
+      attr_reader :documents
       attr_accessor :output
 
       def initialize(path, force_settings: true, &block)
         raise "No block given" unless block
         @output = {}
+        @documents = {}
         set_standard_settings if force_settings
         begin
           @zip = Zip::File.open(path)
-          @xml = @zip.read("word/document.xml")
-          @doc = Nokogiri::XML(xml) { |x| x.noent }
-
-          yield self
+          ["word/document.xml", "word/header1.xml", "word/footer1.xml"].each do |document|
+            next unless @zip.find_entry(document)
+            xml = @zip.read document
+            @documents[document] = Nokogiri::XML(xml) { |x| x.noent }
+            yield self
+          end
         ensure
           @zip.close
         end
@@ -61,17 +66,21 @@ module Consolidate
       end
 
       def extract_style_one
-        (doc / "//w:fldSimple").collect do |field|
-          value = field.attributes["instr"].value.strip
-          value.include?("MERGEFIELD") ? value.gsub("MERGEFIELD", "").strip : nil
-        end.compact
+        documents.collect do |name, document|
+          (document / "//w:fldSimple").collect do |field|
+            value = field.attributes["instr"].value.strip
+            value.include?("MERGEFIELD") ? value.gsub("MERGEFIELD", "").strip : nil
+          end.compact
+        end.flatten
       end
 
       def extract_style_two
-        (doc / "//w:instrText").collect do |instr|
-          value = instr.inner_text
-          value.include?("MERGEFIELD") ? value.gsub("MERGEFIELD", "").strip : nil
-        end.compact
+        documents.collect do |name, document|
+          (document / "//w:instrText").collect do |instr|
+            value = instr.inner_text
+            value.include?("MERGEFIELD") ? value.gsub("MERGEFIELD", "").strip : nil
+          end.compact
+        end.flatten
       end
 
       def substitute_style_one_with document, fields
