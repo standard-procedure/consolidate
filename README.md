@@ -17,7 +17,7 @@ To list the merge fields within a document:
 
 ```ruby
 Consolidate::Docx::Merge.open "/path/to/docx" do |merge|
-  puts merge.examine
+  merge.examine
 end and nil
 ```
 To perform a merge, replacing merge fields with supplied values:
@@ -30,6 +30,18 @@ end
 ```
 
 NOTE: The merge fields are case-sensitive - which is why they should be supplied as strings (using the older `{ "key" => "value" }` style ruby hash).
+
+If your merge isn't working, you can pass `verbose: true` to `open` and it will list the internal .xml documents it finds, the fields it finds within those .xml documents and the substitutions it is trying to perform.
+
+## How it works
+
+This is a bit sketchy and pieced together from the [code I found]((https://gist.github.com/ericmason/7200448)) and various bits of skimming through the published file format.
+
+A .docx file (unlike the previous .doc file), is actually a .zip file that contains a number of .xml files.  The contents of the document are stored in these .xml files, along with configuration information and stuff like fonts and styles.
+
+When setting up a merge field, Word adds some special tags into the .xml file.  There appear to be two different versions of how it does this - using `w:fldSimple` or `w:instrText` tags.  Consolidate goes through each .xml file within the document (ignoring some which are configuration related) and looks for these two types of tag.
+
+The `data` method uses the hash of `field: value` data you supply, copies the .xml files and performs a straight text substitution on any matching merge fields.  Then `write_to`
 
 ## Development
 
