@@ -46,8 +46,6 @@ module Consolidate
       attr_reader :documents
       attr_accessor :output
 
-      EXCLUSIONS = %w{_rels/.rels [Content_Types].xml word/_rels/document.xml.rels word/theme/theme1.xml word/settings.xml word/_rels/settings.xml.rels word/styles.xml word/webSettings.xml word/fontTable.xml docProps/core.xml docProps/app.xml}
-
       def initialize(path, verbose: false, &block)
         raise "No block given" unless block
         @verbose = verbose
@@ -56,7 +54,7 @@ module Consolidate
         begin
           @zip = Zip::File.open(path)
           @zip.entries.each do |entry|
-            next if EXCLUSIONS.include? entry.name
+            next unless entry.name =~ /word\/(document|header|footer|footnotes|endnotes).?\.xml/
             puts "Reading #{entry.name}" if verbose
             xml = @zip.get_input_stream entry
             @documents[entry.name] = Nokogiri::XML(xml) { |x| x.noent }

@@ -1,3 +1,7 @@
+## [0.1.4] - 2023-09-11
+
+Updated which files get exclusions after crashes in production with some client files
+
 ## [0.1.3] - 2023-09-07
 
 Customer had an issue where some fields were not merging correctly
@@ -21,6 +25,3 @@ Customer had an issue where some fields were not merging correctly
 - Initial release
 
 ## [Unreleased]
-
-
-
