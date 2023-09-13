@@ -1,3 +1,29 @@
 #!/usr/bin/env ruby
 
 require "consolidate"
+
+if ARGV[0].nil? || ARGV[0] == ""
+  puts "# Standard::Procedure::Consolidate"
+  puts "## Mailmerge for simple Microsoft Word .docx files."
+  puts ""
+  puts "Create a new file with the mailmerge fields replaced by the data you have supplied"
+  puts "USAGE: consolidate path/to/myfile.docx path/to/mynewfile.docx \"field1=value1\" \"field2=value2\" \"field3=value3\""
+  puts ""
+else
+  input = ARGV[0]
+  output = ARGV[1]
+  data = {}
+  2.upto ARGV.length do |index|
+    substitution = ARGV[index]
+    next if substitution.nil?
+    pieces = substitution.split("=")
+    key = pieces.first.strip
+    value = pieces.last.strip
+    data[key] = value
+  end
+
+  Consolidate::Docx::Merge.open input, verbose: true do |doc|
+    doc.data data
+    doc.write_to output
+  end and nil
+end

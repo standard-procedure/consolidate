@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "consolidate"
+
+if ARGV[0].nil? || ARGV[0] == ""
+  puts "# Standard::Procedure::Consolidate"
+  puts "## Mailmerge for simple Microsoft Word .docx files."
+  puts ""
+  puts "Examine the mailmerge fields inside a .docx file"
+  puts "USAGE: examine path/to/myfile.docx"
+  puts "Option: examine path/to/myfile.docx verbose"
+  puts ""
+else
+  Consolidate::Docx::Merge.open ARGV[0], verbose: (ARGV[1] == "verbose") do |doc|
+    doc.examine
+  end and nil
+end
