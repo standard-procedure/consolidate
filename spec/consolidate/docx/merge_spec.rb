@@ -5,14 +5,14 @@ require "spec_helper"
 RSpec.describe Consolidate::Docx::Merge do
   require "zip"
   let(:file_path) { "spec/files/mm.docx" }
-  let(:data) { {"Name" => "Alice Aadvark", "Company" => "TinyCo", "Package" => "Corporate"} }
+  let(:data) { {name: "Alice Aadvark", company: "TinyCo", system_name: "Collabor8", package: "Corporate"} }
 
   it "lists the merge fields within the document" do
-    result = []
+    field_names = []
     Consolidate::Docx::Merge.open(file_path) do |merge|
-      result = merge.examine
+      field_names = merge.field_names
     end
-    expect(result).to eq(["Name", "Company", "Package"])
+    expect(field_names).to eq(["name", "company", "system_name", "package"])
   end
 
   it "performs a mailmerge and forces Word settings" do

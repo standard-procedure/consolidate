@@ -13,16 +13,21 @@ else
   input = ARGV[0]
   output = ARGV[1]
   data = {}
+  verbose = false
   2.upto ARGV.length do |index|
-    substitution = ARGV[index]
-    next if substitution.nil?
-    pieces = substitution.split("=")
-    key = pieces.first.strip
-    value = pieces.last.strip
-    data[key] = value
+    arg = ARGV[index]
+    next if arg.nil?
+    if arg.strip == "verbose"
+      verbose = true
+    else
+      pieces = arg.split("=")
+      key = pieces.first.strip
+      value = pieces.last.strip
+      data[key] = value
+    end
   end
 
-  Consolidate::Docx::Merge.open input, verbose: true do |doc|
+  Consolidate::Docx::Merge.open input, verbose: verbose do |doc|
     doc.data data
     doc.write_to output
   end and nil

@@ -1,3 +1,8 @@
+## [0.2.0] - 2023-09-13
+
+Thrown away the mail-merge implementation and replaced it with a simple search/replace.  
+Added in the command line utilities for examining and consolidating documents.  
+
 ## [0.1.4] - 2023-09-11
 
 Updated which files get exclusions after crashes in production with some client files

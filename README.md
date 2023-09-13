@@ -1,47 +1,72 @@
 # Standard::Procedure::Consolidate
 
-A simple gem for performing mailmerge on Microsoft Word .docx files.
+A simple gem for performing search and replace on Microsoft Word .docx files.
 
-Important: I can't claim the credit for this - I found [this gist](https://gist.github.com/ericmason/7200448) and have just adapted it.
+Important: I can't claim the credit for this - I found [this gist](https://gist.github.com/ericmason/7200448) and have adapted it for my needs.
 
-It's pretty simple, so it probably won't work with complex Word documents, but it does what I need.  YMMV.
+## Search/Replace for field placeholders
 
+If you have a Word .docx file that looks like this (ignoring formatting): 
+
+```
+Dear {{ first_name }},
+
+Thank you for your purchase of {{ product }} on the {{ date }}.  We hope that with the proper care and attention it will give you years of happy use.  
+
+Regards
+
+{{ user_name }}
+```
+
+We have marked out the "fields" by using squiggly brackets - in a manner similar to (but simpler than) Liquid or Mustache templates.  In this example, we havefields for first_name, product, date and user_name.  
+
+Consolidate reads your .docx file, locates these fields and then replaces them with the values you have supplied, writing the output to a new file.  
+
+NOTE: These are not traditional Word "mail-merge fields" - these are just fragments of text that are within the Word document.  See the history section for why this does not work with merge-fields.  
+
+## Usage
+
+There is a command-line tool or a ruby library that you can include into your code.  
+
+Using the ruby library: 
+
+```ruby
+Consolidate::Docx::Merge.open "/path/to/file.docx" do |doc|
+  puts doc.field_names 
+
+  doc.data first_name: "Alice", product: "Palm Pilot", date: "23rd January 2002", user_name: "Bob"
+  doc.write_to "/path/to/merge-file.docx"
+end 
+```
+
+Using the command line: 
+
+```sh
+examine /path/to/file.docx 
+
+consolidate /path/to/file.docx --out=/path/to/merge-file.docx --data="first_name=Alice&product=Palm Pilot&date=23rd January 2022&user_name=Bob" 
+```
+
+### History
+
+Originally, this gem was intended to open a Word .docx file, find the mailmerge fields within it and then substitute new values.  
+
+I managed to get a basic version of this working with a variety of different Word files and all seemed good.  Until my client reported that when they went to print the document, the mailmerge fields reappeared!  My best guess is that Word is thinking that print-time is a trigger for merging in a data source (for example, printing out a form letter to 200 customers), so all the substitution work that this gem does is then discarded and Word asks for the merge data again.  The frustrating thing is I can't figure out how Word keeps the references to the merge fields after they've been substituted.  
+
+So instead, this does a simple search and replace - looking for fields within squiggly brackets and substituting them.  
+
+### How it works
+
+This is a bit sketchy and pieced together from the [code I found]((https://gist.github.com/ericmason/7200448)) and various bits of skimming through the published file format.
+
+A .docx file is actually a .zip file that contains a number of .xml documents.  Some of these are for storing formatting information (fonts, styles and various metadata) and some are for storing the actual document contents.  
+
+Consolidate looks for word/document.xml files, plus any files that match word/header*.xml, word/footer*.xml, word/footnotes*.xml and word/endnotes*.xml.  It parses the XML, looking for text nodes that contain squiggly brackets.  If it finds them, it then checks to see if we have supplied a data value for the matching field-name and replaces the contents of the node.  
 
 ## Installation
 
     $ bundle add standard-procedure-consolidate
 
-## Usage
-
-To list the merge fields within a document:
-
-```ruby
-Consolidate::Docx::Merge.open "/path/to/docx" do |merge|
-  merge.examine
-end and nil
-```
-To perform a merge, replacing merge fields with supplied values:
-
-```ruby
-Consolidate::Docx::Merge.open "/path/to/docx" do |merge|
-  merge.data "Name" => "Alice Aadvark", "Company" => "TinyCo", "Job_Title" => "CEO"
-  merge.write_to "/path/to/output.docx"
-end
-```
-
-NOTE: The merge fields are case-sensitive - which is why they should be supplied as strings (using the older `{ "key" => "value" }` style ruby hash).
-
-If your merge isn't working, you can pass `verbose: true` to `open` and it will list the internal .xml documents it finds, the fields it finds within those .xml documents and the substitutions it is trying to perform.
-
-## How it works
-
-This is a bit sketchy and pieced together from the [code I found]((https://gist.github.com/ericmason/7200448)) and various bits of skimming through the published file format.
-
-A .docx file (unlike the previous .doc file), is actually a .zip file that contains a number of .xml files.  The contents of the document are stored in these .xml files, along with configuration information and stuff like fonts and styles.
-
-When setting up a merge field, Word adds some special tags into the .xml file.  There appear to be two different versions of how it does this - using `w:fldSimple` or `w:instrText` tags.  Consolidate goes through each .xml file within the document (ignoring some which are configuration related) and looks for these two types of tag.
-
-The `data` method uses the hash of `field: value` data you supply, copies the .xml files and performs a straight text substitution on any matching merge fields.  Then `write_to`
 
 ## Development
 
