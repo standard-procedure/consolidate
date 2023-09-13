@@ -18,7 +18,7 @@ Regards
 {{ user_name }}
 ```
 
-We have marked out the "fields" by using squiggly brackets - in a manner similar to (but simpler than) Liquid or Mustache templates.  In this example, we havefields for first_name, product, date and user_name.  
+We have marked out the "fields" by using squiggly brackets - in a manner similar to (but simpler than) Liquid or Mustache templates.  In this example, we have fields for first_name, product, date and user_name.  
 
 Consolidate reads your .docx file, locates these fields and then replaces them with the values you have supplied, writing the output to a new file.  
 
@@ -44,7 +44,15 @@ Using the command line:
 ```sh
 examine /path/to/file.docx 
 
-consolidate /path/to/file.docx --out=/path/to/merge-file.docx --data="first_name=Alice&product=Palm Pilot&date=23rd January 2022&user_name=Bob" 
+consolidate /path/to/file.docx /path/to/merge-file.docx first_name=Alice "product=Palm Pilot" "date=23rd January 2022" "user_name=Bob" 
+```
+
+If you want to see what the routine is doing you can add the `verbose` option.  
+
+```sh
+examine /path/to/file.docx verbose
+
+consolidate /path/to/file.docx /path/to/merge-file.docx first_name=Alice "product=Palm Pilot" "date=23rd January 2022" "user_name=Bob" verbose
 ```
 
 ### History
