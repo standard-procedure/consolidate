@@ -78,7 +78,7 @@ Consolidate looks for word/document.xml files, plus any files that match word/he
 
 ## Development
 
-The repo contains a .devcontainer folder - this contains instructions for a development container that has everything needed to build the project.  Once the container has started, you can use `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+The repo contains a .devcontainer folder - this contains instructions for a development container that has everything needed to build the project.  Once the container has started, you can use `bin/setup` to install dependencies. Then, run `bundle exec rake` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 `bundle exec rake install` will install the gem on your local machine (obviously not from within the devcontainer though). To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 

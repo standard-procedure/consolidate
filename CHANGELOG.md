@@ -1,3 +1,7 @@
+## [0.3.0] - 2024-11-21
+
+Updated the code that examines the docx file for merge fields to deal with Word formatting tags being inserted in the middle of the merge fields.  
+
 ## [0.2.0] - 2023-09-13
 
 Thrown away the mail-merge implementation and replaced it with a simple search/replace.  

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    standard-procedure-consolidate (0.2.0)
+    standard-procedure-consolidate (0.3.0)
       nokogiri
       rubyzip
 
