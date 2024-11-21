@@ -1,7 +1,23 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ruby
 {
-	"name": "Ruby",
-	"image": "mcr.microsoft.com/devcontainers/ruby:1-3.2-bullseye",
-	"postCreateCommand": "bundle install"
+  "name": "Ruby",
+  "image": "mcr.microsoft.com/devcontainers/ruby:1-3.2-bullseye",
+  "postCreateCommand": "bundle install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-extensions-pack",
+        "testdouble.vscode-standard-ruby",
+        "manuelpuyol.erb-linter",
+        "Shopify.ruby-lsp",
+        "aki77.rails-db-schema",
+        "miguel-savignano.ruby-symbols",
+        "sibiraj-s.vscode-scss-formatter",
+        "Thadeu.vscode-run-rspec-file",
+        "Cronos87.yaml-symbols",
+        "aliariff.vscode-erb-beautify"
+      ]
+    }
+  }
 }
