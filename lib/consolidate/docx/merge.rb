@@ -30,8 +30,8 @@ module Consolidate
       # Read all documents within the docx and extract any merge fields
       def field_names
         tag_nodes.collect do |tag_node|
-          field_name_from tag_node
-        end.compact.uniq
+          field_names_from tag_node
+        end.flatten.compact.uniq
       end
 
       # List the documents stored within this docx
@@ -45,7 +45,7 @@ module Consolidate
 
         if verbose
           puts "...substitutions..."
-          fields.each do |key, value|
+          mapping.each do |key, value|
             puts "      #{key} => #{value}"
           end
         end
@@ -76,6 +76,7 @@ module Consolidate
       attr_reader :xml
       attr_reader :documents
       attr_accessor :output
+      TAG = /\{\{\s*(\S+)\s*\}\}/
 
       def load_documents
         @zip.entries.each_with_object({}) do |entry, documents|
@@ -100,39 +101,51 @@ module Consolidate
       # then find the ancestor node that also includes the ending "}}"
       # This collection of nodes contains all the merge fields for this document
       def tag_nodes_for document
-        (document / "//w:t").collect do |node|
-          (node.children.any? { |child| child.content.include? "{{" }) ? enclosing_node_for_start_tag(node) : nil
-        end.compact
+        (document / "//w:p").select do |paragraph|
+          paragraph.content.match(TAG)
+        end
       end
 
       # Extract the merge field name from the node
-      def field_name_from(tag_node)
-        return nil unless (matches = tag_node.content.match(/{{\s*(\S+)\s*}}/))
-        field_name = matches[1].strip
-        puts "...field #{field_name} found in #{name}" if verbose
-        field_name.to_s
+      def field_names_from(tag_node)
+        matches = tag_node.content.scan(TAG)
+        matches.empty? ? nil : matches.flatten.map(&:strip)
       end
 
       # Go through the given document, replacing any merge fields with the values provided
       # and storing the results in a new document
       def substitute document, document_name:, mapping: {}
         tag_nodes_for(document).each do |tag_node|
-          field_name = field_name_from tag_node
-          next unless mapping.has_key? field_name
-          field_value = mapping[field_name]
-          puts "...substituting #{field_name} with #{field_value} in #{document_name}" if verbose
-          tag_node.content = tag_node.content.gsub(field_name, field_value).gsub(/{{\s*/, "").gsub(/\s*}}/, "")
+          field_names = field_names_from tag_node
+          puts "Original Node for #{field_names} is #{tag_node}" if verbose
+
+          # Extract the paragraph properties node if it exists
+          paragraph_properties = tag_node.search ".//w:pPr"
+          run_properties = tag_node.at_xpath ".//w:rPr"
+
+          text = tag_node.content
+          field_names.each do |field_name|
+            field_value = mapping[field_name].to_s
+            puts "...substituting #{field_name} with #{field_value} in #{document_name}" if verbose
+            text = text.gsub(/{{\s*#{field_name}\s*}}/, field_value)
+          end
+
+          # Create a new text node with the substituted text
+          text_node = Nokogiri::XML::Node.new("w:t", tag_node.document)
+          text_node.content = text
+
+          # Create a new run node to hold the substituted text and the paragraph properties
+          run_node = Nokogiri::XML::Node.new("w:r", tag_node.document)
+          run_node << run_properties if run_properties
+          run_node << text_node
+          tag_node.children = Nokogiri::XML::NodeSet.new(document, paragraph_properties.to_a + [run_node])
+
+          puts "TAG NODE FOR #{field_names} IS #{tag_node}" if verbose
         rescue => ex
           # Have to mangle the exception message otherwise it outputs the entire document
           puts ex.message.to_s[0..255]
         end
         document
-      end
-
-      # Find the ancestor node that contains both the start {{ text and the end }} text enclosing the merge field
-      def enclosing_node_for_start_tag(node)
-        return node if node.content.include? "}}"
-        node.parent.nil? ? nil : enclosing_node_for_start_tag(node.parent)
       end
     end
   end
