@@ -1,3 +1,8 @@
+## [0.3.1] - 2024-11-22
+
+Ensure that the substituted nodes are reinserted correctly into the output document, attempting to restore formatting at the paragraph level (although it does lose formatting at lower levels than this - so-called "run" nodes which represent arbitrary spans of characters within the paragraph).
+
+
 ## [0.3.0] - 2024-11-21
 
 Updated the code that examines the docx file for merge fields to deal with Word formatting tags being inserted in the middle of the merge fields.  
