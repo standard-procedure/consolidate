@@ -1,3 +1,7 @@
+# [0.3.9] - 2024-12-4
+
+Image embedding - not fully tested but it seems to work in a few test cases
+
 ## [0.3.1] - 2024-11-22
 
 Ensure that the substituted nodes are reinserted correctly into the output document, attempting to restore formatting at the paragraph level (although it does lose formatting at lower levels than this - so-called "run" nodes which represent arbitrary spans of characters within the paragraph).
