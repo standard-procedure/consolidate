@@ -56,7 +56,7 @@ module Consolidate
         Zip::File.open(path, Zip::File::CREATE) do |out|
           @images.each do |image_name, data|
             puts "...  writing #{image_name} (#{data.size})" if verbose
-            out.get_output_stream(image_name) do |o|
+            out.get_output_stream("word/#{image_name}") do |o|
               o.write data
             end
           end
@@ -104,7 +104,7 @@ module Consolidate
       def tag_for(field_name) = /\{\{\s*#{field_name}\s*\}\}/
 
       # Path to store the image representing the given field name within the output docx
-      def image_path_for(field_name) = "word/media/#{field_name}.png"
+      def image_path_for(field_name) = "media/#{field_name}.png"
 
       # Find all nodes in all relevant documents that contain a merge field
       def tag_nodes = @documents.collect { |name, document| tag_nodes_for document }.flatten
@@ -151,10 +151,10 @@ module Consolidate
 
           # Create a new run node to hold the run properties and substitute text node
           run_node = Nokogiri::XML::Node.new("w:r", tag_node.document)
-          run_node.children = Nokogiri::XML::NodeSet.new(document, ([run_properties, text_node] + image_nodes).compact)
-
+          run_node << run_properties unless run_properties.nil?
+          run_node << text_node
           # Add the paragraph properties and the run node to the tag node
-          tag_node.children = Nokogiri::XML::NodeSet.new(document, paragraph_properties.to_a + [run_node])
+          tag_node.children = Nokogiri::XML::NodeSet.new(document, paragraph_properties.to_a + [run_node] + image_nodes)
         rescue => ex
           # Have to mangle the exception message otherwise it outputs the entire document
           puts ex.message.to_s[0..255]
