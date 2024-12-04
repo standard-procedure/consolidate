@@ -3,6 +3,7 @@
 require "zip"
 require "nokogiri"
 require_relative "image_reference_node_builder"
+require_relative "image"
 
 module Consolidate
   module Docx
@@ -54,18 +55,14 @@ module Consolidate
       def write_to path
         puts "...writing to #{path}" if verbose
         Zip::File.open(path, Zip::File::CREATE) do |out|
-          @images.each do |image_name, data|
-            puts "...  writing #{image_name} (#{data.size})" if verbose
-            out.get_output_stream("word/#{image_name}") do |o|
-              o.write data
-            end
+          @images.each do |field_name, image|
+            puts "...  writing #{field_name} to #{image.storage_path}" if verbose
+            out.get_output_stream(image.storage_path) { |o| o.write image.contents }
           end
 
           @zip.each do |entry|
-            puts "...  writing #{entry.name}" if verbose
-            out.get_output_stream(entry.name) do |o|
-              o.write(@output[entry.name] || @relations[entry.name] || @zip.read(entry.name))
-            end
+            puts "...  writing updated document to #{entry.name}" if verbose
+            out.get_output_stream(entry.name) { |o| o.write(@output[entry.name] || @relations[entry.name] || @zip.read(entry.name)) }
           end
         end
       end
@@ -77,7 +74,7 @@ module Consolidate
       def load_documents
         @zip.entries.each_with_object({}) do |entry, results|
           next unless entry.name.match?(/word\/(document|header|footer|footnotes|endnotes).?\.xml/)
-          puts "...reading #{entry.name}" if verbose
+          puts "...reading document #{entry.name}" if verbose
           contents = @zip.get_input_stream entry
           results[entry.name] = Nokogiri::XML(contents) { |x| x.noent }
         end
@@ -86,7 +83,7 @@ module Consolidate
       def load_relations
         @zip.entries.each_with_object({}) do |entry, results|
           next unless entry.name.match?(/word\/_rels\/.*.rels/)
-          puts "...reading #{entry.name}" if verbose
+          puts "...reading relation #{entry.name}" if verbose
           contents = @zip.get_input_stream entry
           results[entry.name] = Nokogiri::XML(contents) { |x| x.noent }
         end
@@ -103,9 +100,6 @@ module Consolidate
       # Regex to find merge fields containing the given field name
       def tag_for(field_name) = /\{\{\s*#{field_name}\s*\}\}/
 
-      # Path to store the image representing the given field name within the output docx
-      def image_path_for(field_name) = "media/#{field_name}.png"
-
       # Find all nodes in all relevant documents that contain a merge field
       def tag_nodes = @documents.collect { |name, document| tag_nodes_for document }.flatten
 
@@ -118,6 +112,39 @@ module Consolidate
 
       # Extract the image field name(s) from the paragraph
       def image_field_names_from(tag_node) = (matches = tag_node.content.scan(image_tag)).empty? ? nil : matches.flatten.map(&:strip)
+
+      # Identifier to use when linking a merge field to the actual image file contents
+      def relation_id_for(field_name) = "rId#{field_name}"
+
+      # Create relation links for each image field and store the image data
+      def load_images_and_link_relations_from mapping
+        load_images_from(mapping).tap do |images|
+          link_relations_to images
+        end
+      end
+
+      # Build a mapping of image paths to the image data so that the image data can be stored in the output docx
+      def load_images_from mapping = {}
+        image_field_names.each_with_object({}) do |field_name, result|
+          result[field_name] = Consolidate::Docx::Image.new(mapping[field_name])
+        end
+      end
+
+      # Update all relation documents to include a relationship for each image field and its stored image path
+      def link_relations_to images
+        @relations.each do |name, xml|
+          images.each do |field_name, image|
+            # Is this image already referenced in this relationship document?
+            next unless xml.at_xpath("//Relationship[@Target='#{image.media_path}']").nil?
+            puts "...linking #{field_name} to #{image.media_path}" if verbose
+            xml.root << Nokogiri::XML::Node.new("Relationship", xml).tap do |relation|
+              relation["Id"] = relation_id_for(field_name)
+              relation["Type"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+              relation["Target"] = image.media_path
+            end
+          end
+        end
+      end
 
       # Go through the given document, replacing any merge fields with the values provided
       # and storing the results in a new document
@@ -139,10 +166,11 @@ module Consolidate
             text = text.gsub(tag_for(field_name), field_value)
           end
           image_nodes = image_field_names.collect do |field_name|
-            puts "...substituting #{field_name} with #{image_path_for(field_name)} in #{document_name}" if verbose
-            # Add an image reference node and remove the merge tag
+            image = @images[field_name]
+            puts "...substituting #{field_name} in #{document_name}" if verbose
+            # Remove the merge tag and create an image reference node to be added to this node
             text = text.gsub(tag_for(field_name), "")
-            image_reference_node_for(field_name, document: document)
+            ImageReferenceNodeBuilder.new(field_name: field_name, image: image, node_id: relation_id_for(field_name), document: document).call
           end
 
           # Create a new text node with the substituted text
@@ -162,39 +190,6 @@ module Consolidate
         end
         document
       end
-
-      def relation_id_for(field_name) = "rId#{field_name}"
-
-      # Create relation links for each image field and store the image data
-      def load_images_and_link_relations_from mapping
-        link_relations_to_image_fields
-        load_images_from mapping
-      end
-
-      # Build a mapping of image paths to the image data so that the image data can be stored in the output docx
-      def load_images_from mapping = {}
-        image_field_names.each_with_object({}) do |field_name, result|
-          result[image_path_for(field_name)] = mapping[field_name]
-        end
-      end
-
-      # Update all relation documents to include a relationship for each image field and its stored image path
-      def link_relations_to_image_fields
-        @relations.each do |name, xml|
-          image_field_names.each do |field_name|
-            next if xml.at_xpath("//Relationship[@Target='#{image_path_for(field_name)}']")
-            puts "...linking #{field_name} to #{image_path_for(field_name)}" if verbose
-            relation_node = Nokogiri::XML::Node.new("Relationship", xml)
-            relation_node["Id"] = relation_id_for(field_name)
-            relation_node["Type"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
-            relation_node["Target"] = image_path_for(field_name)
-            xml.root << relation_node
-          end
-        end
-      end
-
-      # Build an XML node to embed the image into the document
-      def image_reference_node_for(field_name, document:) = ImageReferenceNodeBuilder.new(field_name: field_name, node_id: relation_id_for(field_name), document: document).call
     end
   end
 end

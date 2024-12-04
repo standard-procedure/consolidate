@@ -5,14 +5,14 @@ require "nokogiri"
 
 module Consolidate
   module Docx
-    class ImageReferenceNodeBuilder < Data.define(:field_name, :node_id, :document)
+    class ImageReferenceNodeBuilder < Data.define(:field_name, :image, :node_id, :document)
       def call
         Nokogiri::XML::Node.new("w:r", document).tap do |run_node|
           run_node << Nokogiri::XML::Node.new("w:drawing", document).tap do |drawing|
             drawing << Nokogiri::XML::Node.new("wp:inline", document).tap do |inline|
               inline << Nokogiri::XML::Node.new("wp:extend", document).tap do |extent|
-                extent["cx"] = "1024000"
-                extent["cy"] = "1024000"
+                extent["cx"] = image.width.to_s
+                extent["cy"] = image.height.to_s
               end
               inline << Nokogiri::XML::Node.new("wp:effectExtent", document).tap do |effect_extent|
                 effect_extent["l"] = "0"
@@ -21,7 +21,7 @@ module Consolidate
                 effect_extent["b"] = "0"
               end
               inline << Nokogiri::XML::Node.new("wp:docPr", document).tap do |doc_pr|
-                doc_pr["id"] = "1"
+                doc_pr["id"] = node_id
                 doc_pr["name"] = field_name
               end
               inline << Nokogiri::XML::Node.new("wp:cNvGraphicFramePr", document) do |c_nv_graphic_frame_pr|
@@ -38,7 +38,7 @@ module Consolidate
                     pic["xmlns:pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
                     pic << Nokogiri::XML::Node.new("pic:nvPicPr", document).tap do |nv_pic_pr|
                       nv_pic_pr << Nokogiri::XML::Node.new("pic:cNvPr", document).tap do |c_nv_pr|
-                        c_nv_pr["id"] = "0"
+                        c_nv_pr["id"] = node_id
                         c_nv_pr["name"] = field_name
                       end
                       nv_pic_pr << Nokogiri::XML::Node.new("pic:cNvPicPr", document).tap do |c_nv_pic_pr|
@@ -64,21 +64,13 @@ module Consolidate
                           off["y"] = "0"
                         end
                         xfrm << Nokogiri::XML::Node.new("a:ext", document).tap do |ext|
-                          ext["cx"] = "1024000"
-                          ext["cy"] = "1024000"
+                          ext["cx"] = image.width.to_s
+                          ext["cy"] = image.height.to_s
                         end
                       end
                       sp_pr << Nokogiri::XML::Node.new("a:prstGeom", document).tap do |prst_geom|
                         prst_geom["prst"] = "rect"
                         prst_geom << Nokogiri::XML::Node.new("a:avLst", document)
-                      end
-                      sp_pr << Nokogiri::XML::Node.new("a:ln", document).tap do |ln|
-                        ln["w"] = "9525"
-                        ln["cap"] = "flat"
-                        ln << Nokogiri::XML::Node.new("a:noFill", document)
-                        ln << Nokogiri::XML::Node.new("a:miter", document).tap do |miter|
-                          miter["lim"] = "800000"
-                        end
                       end
                       sp_pr << Nokogiri::XML::Node.new("a:effectLst", document)
                     end

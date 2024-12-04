@@ -32,7 +32,7 @@ Using the ruby library:
 
 ```ruby
 Consolidate::Docx::Merge.open "/path/to/file.docx" do |doc|
-  puts doc.field_names 
+  puts doc.text_field_names 
 
   doc.data first_name: "Alice", product: "Palm Pilot", date: "23rd January 2002", user_name: "Bob"
   doc.write_to "/path/to/merge-file.docx"
@@ -54,6 +54,27 @@ examine /path/to/file.docx verbose
 
 consolidate /path/to/file.docx /path/to/merge-file.docx first_name=Alice "product=Palm Pilot" "date=23rd January 2022" "user_name=Bob" verbose
 ```
+
+### Embedding images
+
+If any of the merge fields end with `_image` then it is assumed that they represent an image to be substituted into the document.  (At present this is not available on the command line).  
+
+```ruby
+Consolidate::Docx::Merge.open "/path/to/file.docx" do |doc|
+  puts doc.text_field_names 
+  puts doc.image_field_names
+
+  doc.data first_name: "Alice", product: "Palm Pilot", date: "23rd January 2002", user_name: "Bob", header_logo_image: Consolidate::Image.new(name: "logo.png", width: 1024, height: 128, path: "/path/to/logo.png"), promotion_image: Consolidate::Image.new(name: "promotion.jpg", width: 2048, height: 2048, url: "https://myshop.com/promotion.jpg"), local_image: Consolidate::Image.new(name: "local.png", width: 256, height: 256, contents: File.open("/path/to/local.png"))
+  doc.write_to "/path/to/merge-file.docx"
+end 
+```
+
+The `Consolidate::Image` can be used to provide an image in three ways:
+- via a path
+- via a URL
+- via an IO object
+
+Note - if the merge routine detects _any_ image fields within the document, it will attempt to load all image data (triggering file reads or HTTP requests) and it will embed those images into the output .docx file - even if the merge field in question is never used.  
 
 ### History
 
