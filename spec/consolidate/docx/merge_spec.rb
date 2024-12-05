@@ -108,7 +108,7 @@ RSpec.describe Consolidate::Docx::Merge do
     end
 
     it "replaces the image fields with embedded images and references to those images" do
-      Consolidate::Docx::Merge.open(file_path, verbose: false) do |merge|
+      Consolidate::Docx::Merge.open(file_path, verbose: true) do |merge|
         merge.data data
         merge.write_to output_path
       end
@@ -116,13 +116,16 @@ RSpec.describe Consolidate::Docx::Merge do
       expect(File.exist?(output_path)).to be true
 
       zip = Zip::File.open(output_path)
+
+      # First Image is substituted in the header
+      xml = zip.read("word/header1.xml")
+      expect(xml.include?("rId_first_image")).to eq true
+      expect(zip.find_entry("word/media/c8o.png")).to_not be_nil
+
+      # Second Image is substituted in the main document
       xml = zip.read("word/document.xml")
-      image_data.each do |field_name, image|
-        image_path = "word/media/#{image.name}"
-        image_id = "rId#{field_name}"
-        expect(xml.include?(image_id)).to eq true
-        expect(zip.find_entry(image_path)).to be_truthy
-      end
+      expect(xml.include?("rId_second_image")).to eq true
+      expect(zip.find_entry("word/media/echodek.png")).to_not be_nil
     end
   end
 

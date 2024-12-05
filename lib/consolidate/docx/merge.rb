@@ -19,6 +19,7 @@ module Consolidate
         @verbose = verbose
         @zip = Zip::File.open(path)
         @documents = load_documents
+        @contents_xml = read_and_update_contents_xml
         @relations = load_relations
         @output = {}
         @images = {}
@@ -27,6 +28,7 @@ module Consolidate
       # Helper method to display the contents of the document and the merge fields from the CLI
       def examine
         puts "Documents: #{document_names.join(", ")}"
+        puts "Content documents: #{content_document_names.join(", ")}"
         puts "Merge fields: #{text_field_names.join(", ")}"
         puts "Image fields: #{image_field_names.join(", ")}"
       end
@@ -38,12 +40,15 @@ module Consolidate
       def image_field_names = @image_field_names ||= tag_nodes.collect { |tag_node| image_field_names_from tag_node }.flatten.compact.uniq
 
       # List the documents stored within this docx
-      def document_names = @zip.entries.collect { |entry| entry.name }
+      def document_names = @zip.entries.map(&:name)
+
+      # List the content within this docx
+      def content_document_names = @documents.keys
 
       # Set the merge data and erform the substitution - creating copies of any documents that contain merge tags and replacing the tags with the supplied data
       def data mapping = {}
         mapping = mapping.transform_keys(&:to_s)
-        puts mapping.keys.select { |field_name| text_field_names.include?(field_name) }.map { |field_name| "#{field_name} => #{mapping[field_name]}" }.join("\n") if verbose
+        puts mapping.keys.select { |field_name| text_field_names.include?(field_name) }.map { |field_name| "...#{field_name} => #{mapping[field_name]}" }.join("\n") if verbose
 
         @images = load_images_and_link_relations_from mapping
 
@@ -55,6 +60,8 @@ module Consolidate
       def write_to path
         puts "...writing to #{path}" if verbose
         Zip::File.open(path, Zip::File::CREATE) do |out|
+          @output[contents_xml] = @contents_xml.serialize save_with: 0
+
           @images.each do |field_name, image|
             puts "...  writing #{field_name} to #{image.storage_path}" if verbose
             out.get_output_stream(image.storage_path) { |o| o.write image.contents }
@@ -71,12 +78,43 @@ module Consolidate
 
       attr_reader :verbose
 
+      def contents_xml = "[Content_Types].xml"
+
       def load_documents
         @zip.entries.each_with_object({}) do |entry, results|
           next unless entry.name.match?(/word\/(document|header|footer|footnotes|endnotes).?\.xml/)
           puts "...reading document #{entry.name}" if verbose
           contents = @zip.get_input_stream entry
           results[entry.name] = Nokogiri::XML(contents) { |x| x.noent }
+        end
+      end
+
+      def read_and_update_contents_xml
+        puts "...reading and updating #{contents_xml}" if verbose
+        content = @zip.get_input_stream(contents_xml)
+        Nokogiri::XML(content) { |x| x.noent }.tap do |document|
+          add_content_relations_to document
+        end
+      end
+
+      CONTENT_RELATIONS = {
+        jpeg: "image/jpg",
+        png: "image/png",
+        bmp: "image/bmp",
+        gif: "image/gif",
+        tif: "image/tif",
+        pdf: "application/pdf",
+        mov: "application/movie"
+      }.freeze
+
+      def add_content_relations_to document
+        CONTENT_RELATIONS.each do |file_type, content_type|
+          next unless document.at_xpath("//Default[@Extension=\"#{file_type}\"]").nil?
+          puts "...   adding #{file_type} => #{content_type}" if verbose
+          document.root << Nokogiri::XML::Node.new("Default", document).tap do |relation|
+            relation["Extension"] = file_type
+            relation["ContentType"] = content_type
+          end
         end
       end
 
@@ -114,7 +152,7 @@ module Consolidate
       def image_field_names_from(tag_node) = (matches = tag_node.content.scan(image_tag)).empty? ? nil : matches.flatten.map(&:strip)
 
       # Identifier to use when linking a merge field to the actual image file contents
-      def relation_id_for(field_name) = "rId#{field_name}"
+      def relation_id_for(field_name) = "rId_#{field_name}"
 
       # Create relation links for each image field and store the image data
       def load_images_and_link_relations_from mapping
@@ -135,8 +173,8 @@ module Consolidate
         @relations.each do |name, xml|
           images.each do |field_name, image|
             # Is this image already referenced in this relationship document?
-            next unless xml.at_xpath("//Relationship[@Target='#{image.media_path}']").nil?
-            puts "...linking #{field_name} to #{image.media_path}" if verbose
+            next unless xml.at_xpath("//Relationship[@Target=\"#{image.media_path}\"]").nil?
+            puts "...linking #{field_name} to #{image.storage_path}" if verbose
             xml.root << Nokogiri::XML::Node.new("Relationship", xml).tap do |relation|
               relation["Id"] = relation_id_for(field_name)
               relation["Type"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
@@ -167,7 +205,7 @@ module Consolidate
           end
           image_nodes = image_field_names.collect do |field_name|
             image = @images[field_name]
-            puts "...substituting #{field_name} in #{document_name}" if verbose
+            puts "...substituting #{field_name} with #{relation_id_for(field_name)} (#{image.storage_path}) in #{document_name}" if verbose
             # Remove the merge tag and create an image reference node to be added to this node
             text = text.gsub(tag_for(field_name), "")
             ImageReferenceNodeBuilder.new(field_name: field_name, image: image, node_id: relation_id_for(field_name), document: document).call
@@ -181,8 +219,9 @@ module Consolidate
           run_node = Nokogiri::XML::Node.new("w:r", tag_node.document)
           run_node << run_properties unless run_properties.nil?
           run_node << text_node
+          image_nodes.each { |n| run_node << n }
           # Add the paragraph properties and the run node to the tag node
-          tag_node.children = Nokogiri::XML::NodeSet.new(document, paragraph_properties.to_a + [run_node] + image_nodes)
+          tag_node.children = Nokogiri::XML::NodeSet.new(document, paragraph_properties.to_a + [run_node])
         rescue => ex
           # Have to mangle the exception message otherwise it outputs the entire document
           puts ex.message.to_s[0..255]
