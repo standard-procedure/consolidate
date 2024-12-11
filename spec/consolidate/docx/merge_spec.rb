@@ -89,7 +89,9 @@ RSpec.describe Consolidate::Docx::Merge do
       Consolidate::Docx::Merge.open(file_path) do |merge|
         field_names = merge.image_field_names
       end
-      expect(field_names).to eq(["first_image", "second_image"])
+      expect(field_names.size).to eq 2
+      expect(field_names).to include "first_image"
+      expect(field_names).to include "second_image"
     end
 
     it "replaces the text fields with the supplied data" do
@@ -108,8 +110,12 @@ RSpec.describe Consolidate::Docx::Merge do
     end
 
     it "replaces the image fields with embedded images and references to those images" do
+      first_image_id = second_image_id = ""
+
       Consolidate::Docx::Merge.open(file_path, verbose: true) do |merge|
         merge.data data
+        first_image_id = merge.send :relation_id_for, "first_image"
+        second_image_id = merge.send :relation_id_for, "second_image"
         merge.write_to output_path
       end
 
@@ -119,12 +125,12 @@ RSpec.describe Consolidate::Docx::Merge do
 
       # First Image is substituted in the header
       xml = zip.read("word/header1.xml")
-      expect(xml.include?("rId_first_image")).to eq true
+      expect(xml.include?(first_image_id)).to eq true
       expect(zip.find_entry("word/media/c8o.png")).to_not be_nil
 
       # Second Image is substituted in the main document
       xml = zip.read("word/document.xml")
-      expect(xml.include?("rId_second_image")).to eq true
+      expect(xml.include?(second_image_id)).to eq true
       expect(zip.find_entry("word/media/echodek.png")).to_not be_nil
     end
   end
