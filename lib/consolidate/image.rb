@@ -2,7 +2,7 @@
 
 module Consolidate
   class Image
-    attr_reader :name, :width, :height
+    attr_reader :name, :width, :height, :aspect_ratio, :dpi
 
     def initialize name:, width:, height:, path: nil, url: nil, contents: nil
       @name = name
@@ -11,6 +11,9 @@ module Consolidate
       @path = path
       @url = url
       @contents = contents
+      @aspect_ratio = width.to_f / height.to_f
+      #  TODO: Read this from the contents
+      @dpi = {x: 72, y: 72}
     end
 
     def to_s = name

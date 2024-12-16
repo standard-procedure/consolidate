@@ -14,9 +14,9 @@ module Consolidate
             inline["distB"] = "0"
             inline["distL"] = "0"
             inline["distR"] = "0"
-            inline << Nokogiri::XML::Node.new("wp:extend", document).tap do |extent|
-              extent["cx"] = image.width.to_s
-              extent["cy"] = image.height.to_s
+            inline << Nokogiri::XML::Node.new("wp:extent", document).tap do |extent|
+              extent["cx"] = image.clamped_width(max_width_from(document))
+              extent["cy"] = image.clamped_height(max_width_from(document))
             end
             inline << Nokogiri::XML::Node.new("wp:effectExtent", document).tap do |effect_extent|
               effect_extent["l"] = "0"
@@ -41,7 +41,7 @@ module Consolidate
                       c_nv_pr["name"] = image.name
                       c_nv_pr["descr"] = image.name
                       c_nv_pr["hidden"] = false
-                      c_nv_pr << Nokogiri::XML::Node.new("pic:nvPicPr", document)
+                      c_nv_pr << Nokogiri::XML::Node.new("pic:cNvPicPr", document)
                     end
                   end
                   pic << Nokogiri::XML::Node.new("pic:blipFill", document).tap do |blip_fill|
@@ -59,8 +59,8 @@ module Consolidate
                         off["y"] = "0"
                       end
                       xfrm << Nokogiri::XML::Node.new("a:ext", document).tap do |ext|
-                        ext["cx"] = image.width.to_s
-                        ext["cy"] = image.height.to_s
+                        ext["cx"] = image.clamped_width(max_width_from(document))
+                        ext["cy"] = image.clamped_height(max_width_from(document))
                       end
                     end
                     sp_pr << Nokogiri::XML::Node.new("a:prstGeom", document).tap do |prst_geom|
@@ -73,6 +73,15 @@ module Consolidate
             end
           end
         end
+      end
+
+      DEFAULT_PAGE_WIDTH = 12_240
+      TWENTIETHS_OF_A_POINT_TO_EMU = 635
+      DEFAULT_PAGE_WIDTH_IN_EMU = DEFAULT_PAGE_WIDTH * TWENTIETHS_OF_A_POINT_TO_EMU
+
+      private def max_width_from document
+        page_width = (document.at_xpath("//w:sectPr/w:pgSz/@w:w")&.value || DEFAULT_PAGE_WIDTH).to_i
+        page_width * TWENTIETHS_OF_A_POINT_TO_EMU
       end
     end
   end

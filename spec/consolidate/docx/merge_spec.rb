@@ -112,7 +112,7 @@ RSpec.describe Consolidate::Docx::Merge do
     it "replaces the image fields with embedded images and references to those images" do
       first_image_id = second_image_id = ""
 
-      Consolidate::Docx::Merge.open(file_path, verbose: true) do |merge|
+      Consolidate::Docx::Merge.open(file_path, verbose: false) do |merge|
         merge.data data
         first_image_id = merge.send :relation_id_for, "first_image"
         second_image_id = merge.send :relation_id_for, "second_image"
