@@ -1,3 +1,7 @@
+# [0.4.0] - 2024-12-16
+
+Image embedding works
+
 # [0.3.9] - 2024-12-4
 
 Image embedding - not fully tested but it seems to work in a few test cases
