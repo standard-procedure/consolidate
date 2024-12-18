@@ -133,6 +133,35 @@ RSpec.describe Consolidate::Docx::Merge do
       expect(xml.include?(second_image_id)).to eq true
       expect(zip.find_entry("word/media/echodek.png")).to_not be_nil
     end
+
+    it "replaces the image fields with blanks if the image itself is not provided" do
+      output_path = "tmp/images_blank.docx"
+      data[:second_image] = nil
+      first_image_id = second_image_id = ""
+
+      Consolidate::Docx::Merge.open(file_path, verbose: false) do |merge|
+        merge.data data
+        first_image_id = merge.send :relation_id_for, "first_image"
+        second_image_id = merge.send :relation_id_for, "second_image"
+        merge.write_to output_path
+      end
+
+      expect(File.exist?(output_path)).to be true
+
+      zip = Zip::File.open(output_path)
+
+      # First Image is substituted in the header
+      xml = zip.read("word/header1.xml")
+      expect(xml.include?(first_image_id)).to eq true
+      expect(zip.find_entry("word/media/c8o.png")).to_not be_nil
+
+      # Second Image is substituted in the main document
+      xml = zip.read("word/document.xml")
+      expect(xml.include?(second_image_id)).to_not eq true
+      expect(xml.include?("{{second_image}}")).to_not eq true
+      expect(zip.find_entry("word/media/echodek.png")).to be_nil
+    end
+
   end
 
   describe "with a docx file where the text fields have embedded word formatting" do

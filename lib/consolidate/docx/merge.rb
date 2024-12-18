@@ -70,6 +70,7 @@ module Consolidate
           @output[contents_xml] = @contents_xml.serialize save_with: 0
 
           @images.each do |field_name, image|
+            next if image.nil?
             puts "...  writing image #{field_name} to #{image.storage_path}" if verbose
             out.get_output_stream(image.storage_path) { |o| o.write image.contents }
           end
@@ -120,7 +121,7 @@ module Consolidate
       def relation_number_for(field_name) = @mapping.keys.index(field_name) + 1000
 
       # Identifier to use when linking a merge field to the actual image file contents
-      def relation_id_for(field_name) = "rId#{relation_number_for(field_name)}"
+      def relation_id_for(field_name) = "rId#{field_name}"
 
       # Empty elations document for documents that do not already have one
       def default_relations_document = %(<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>)
@@ -156,8 +157,8 @@ module Consolidate
       # Build a mapping of image paths to the image data so that the image data can be stored in the output docx
       def load_images
         image_field_names.each_with_object({}) do |field_name, result|
-          result[field_name] = Consolidate::Docx::Image.new(@mapping[field_name])
-          puts "...   #{field_name} => #{result[field_name].media_path}" if verbose
+          result[field_name] = @mapping[field_name].nil? ? nil : Consolidate::Docx::Image.new(@mapping[field_name])
+          puts "...   #{field_name} => #{result[field_name]&.media_path}" if verbose
         end
       end
 
@@ -166,6 +167,8 @@ module Consolidate
         @relations.each do |name, xml|
           puts "...   linking images in #{name}" if verbose
           images.each do |field_name, image|
+            # Has an actual image file been supplied?
+            next if image.nil? 
             # Is this image already referenced in this relationship document?
             next unless xml.at_xpath("//Relationship[@Target=\"#{image.media_path}\"]").nil?
             puts "...      #{relation_id_for(field_name)} => #{image.media_path}" if verbose
@@ -245,8 +248,15 @@ module Consolidate
             field_name = piece.strip
             if field_names.include? field_name
               image = @images[field_name]
-              puts "...   substituting '#{field_name}' with '<#{relation_id_for(field_name)}/>'" if verbose
-              ImageReferenceNodeBuilder.new(field_name: field_name, image: image, node_id: relation_id_for(field_name), image_number: relation_number_for(field_name), document: document).call
+              # if no image was provided then insert blank text
+              # otherwise insert a w:drawing node that references the image contents
+              if image.nil? 
+                puts "...   substituting '#{field_name}' with blank as no image was provided" if verbose
+                Nokogiri::XML::Node.new("w:t", document) { |t| t.content = "" }
+              else
+                puts "...   substituting '#{field_name}' with '<#{relation_id_for(field_name)}/>'" if verbose
+                ImageReferenceNodeBuilder.new(field_name: field_name, image: image, node_id: relation_id_for(field_name), image_number: relation_number_for(field_name), document: document).call
+              end
             else
               Nokogiri::XML::Node.new("w:t", document) { |t| t.content = piece }
             end
