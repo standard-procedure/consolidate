@@ -1,3 +1,7 @@
+# [0.4.1] - 2024-12-18
+
+Replace image merge fields with blanks if the image data is not provided 
+
 # [0.4.0] - 2024-12-16
 
 Image embedding works
