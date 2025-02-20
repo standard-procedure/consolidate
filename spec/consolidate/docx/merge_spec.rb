@@ -161,7 +161,6 @@ RSpec.describe Consolidate::Docx::Merge do
       expect(xml.include?("{{second_image}}")).to_not eq true
       expect(zip.find_entry("word/media/echodek.png")).to be_nil
     end
-
   end
 
   describe "with a docx file where the text fields have embedded word formatting" do
