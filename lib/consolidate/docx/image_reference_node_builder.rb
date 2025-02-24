@@ -116,24 +116,17 @@ module Consolidate
         end
       end
 
-      DEFAULT_PAGE_WIDTH = 12_240
-      TWENTIETHS_OF_A_POINT_TO_EMU = 635
-      DEFAULT_PAGE_WIDTH_IN_EMU = DEFAULT_PAGE_WIDTH * TWENTIETHS_OF_A_POINT_TO_EMU
-      EMU_PER_PIXEL = 9525
-      DEFAULT_PAGE_HEIGHT = DEFAULT_PAGE_WIDTH * 11 / 8.5 # Assuming standard page ratio
-      DEFAULT_PAGE_HEIGHT_IN_EMU = DEFAULT_PAGE_HEIGHT * TWENTIETHS_OF_A_POINT_TO_EMU
-
       private def max_width_from document
-        page_width = (document.at_xpath("//w:sectPr/w:pgSz/@w:w")&.value || DEFAULT_PAGE_WIDTH).to_i
-        page_width * TWENTIETHS_OF_A_POINT_TO_EMU
+        page_width = (document.at_xpath("//w:sectPr/w:pgSz/@w:w")&.value || Image::DEFAULT_PAGE_WIDTH).to_i
+        page_width * Image::TWENTIETHS_OF_A_POINT_TO_EMU
       end
 
       private def max_dimensions_from(document)
-        page_width = (document.at_xpath("//w:sectPr/w:pgSz/@w:w")&.value || DEFAULT_PAGE_WIDTH).to_i
-        page_height = (document.at_xpath("//w:sectPr/w:pgSz/@w:h")&.value || DEFAULT_PAGE_HEIGHT).to_i
+        page_width = (document.at_xpath("//w:sectPr/w:pgSz/@w:w")&.value || Image::DEFAULT_PAGE_WIDTH).to_i
+        page_height = (document.at_xpath("//w:sectPr/w:pgSz/@w:h")&.value || Image::DEFAULT_PAGE_HEIGHT).to_i
 
-        width_emu = page_width * TWENTIETHS_OF_A_POINT_TO_EMU
-        height_emu = page_height * TWENTIETHS_OF_A_POINT_TO_EMU
+        width_emu = page_width * Image::TWENTIETHS_OF_A_POINT_TO_EMU
+        height_emu = page_height * Image::TWENTIETHS_OF_A_POINT_TO_EMU
 
         [width_emu, height_emu]
       end

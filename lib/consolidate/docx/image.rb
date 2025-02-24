@@ -18,15 +18,16 @@ module Consolidate
       # Convert height from pixels to EMU
       def height = super * emu_per_height_pixel
 
-      # Get the width of this image in EMU up to a maximum page width (also in EMU)
-      def clamped_width(maximum = 7_772_400) = [width, maximum].min
+      def emu_per_width_pixel = EMU_PER_PIXEL * 72 / dpi[:x]
 
-      # Get the height of this image in EMU adjusted for a maximum page width (also in EMU)
-      def clamped_height(maximum = 7_772_400) = (height * clamped_width(maximum).to_f / width.to_f).to_i
+      def emu_per_height_pixel = EMU_PER_PIXEL * 72 / dpi[:y]
 
-      def emu_per_width_pixel = 914_400 / dpi[:x]
-
-      def emu_per_height_pixel = 914_400 / dpi[:y]
+      DEFAULT_PAGE_WIDTH = 12_240
+      TWENTIETHS_OF_A_POINT_TO_EMU = 635
+      DEFAULT_PAGE_WIDTH_IN_EMU = DEFAULT_PAGE_WIDTH * TWENTIETHS_OF_A_POINT_TO_EMU
+      EMU_PER_PIXEL = 9525
+      DEFAULT_PAGE_HEIGHT = DEFAULT_PAGE_WIDTH * 11 / 8.5 # Assuming US Letter size
+      DEFAULT_PAGE_HEIGHT_IN_EMU = DEFAULT_PAGE_HEIGHT * TWENTIETHS_OF_A_POINT_TO_EMU
     end
   end
 end
