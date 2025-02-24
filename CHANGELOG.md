@@ -1,3 +1,7 @@
+# [0.4.3] - 2025-02-24
+
+Use wp:anchor tags instead of wp:inline tags for embedding images
+
 # [0.4.1] - 2024-12-18
 
 Replace image merge fields with blanks if the image data is not provided 
