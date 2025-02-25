@@ -3,8 +3,7 @@
 module Consolidate
   class Image
     attr_reader :name, :width, :height, :aspect_ratio, :dpi
-
-    def initialize name:, width:, height:, path: nil, url: nil, contents: nil
+    def initialize name:, width:, height:, path: nil, url: nil, contents: nil, dpix: nil, dpiy: nil
       @name = name
       @width = width
       @height = height
@@ -13,7 +12,7 @@ module Consolidate
       @contents = contents
       @aspect_ratio = width.to_f / height.to_f
       #  TODO: Read this from the contents
-      @dpi = {x: 72, y: 72}
+      @dpi = {x: dpix || 72, y: dpiy || 72}
     end
 
     def to_s = name
