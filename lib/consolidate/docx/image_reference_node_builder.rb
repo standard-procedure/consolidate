@@ -5,7 +5,7 @@ require "nokogiri"
 # To test image scaling manually, from the console:
 # Consolidate::Docx::Merge.open "spec/files/logo-doc.docx" do |doc|
 #   doc.data logo_image: Consolidate::Image.new(name: "logo.png", width: 4096, height: 1122, path: "spec/files/logo.png")
-#   doc.write_to "tmp/merge.docx"
+#   doc.write_to "tmp/doc-with-logos.docx"
 # end
 module Consolidate
   module Docx
@@ -16,80 +16,38 @@ module Consolidate
 
         Nokogiri::XML::Node.new("w:drawing", document).tap do |drawing|
           drawing["xmlns:a"] = "http://schemas.openxmlformats.org/drawingml/2006/main"
-          drawing << create_anchor_node(scaled_width, scaled_height)
+          drawing << create_inline_node(scaled_width, scaled_height)
         end
       rescue => ex
         puts ex.backtrace
       end
 
-      private def create_anchor_node(scaled_width, scaled_height)
-        Nokogiri::XML::Node.new("wp:anchor", document).tap do |anchor|
-          # Basic anchor properties
-          anchor["behindDoc"] = "0"
-          anchor["distT"] = "0"
-          anchor["distB"] = "0"
-          anchor["distL"] = "0"
-          anchor["distR"] = "0"
-          anchor["simplePos"] = "0"
-          anchor["locked"] = "0"
-          anchor["layoutInCell"] = "1"
-          anchor["allowOverlap"] = "1"
-          anchor["relativeHeight"] = "2"
+      private def create_inline_node(scaled_width, scaled_height)
+        Nokogiri::XML::Node.new("wp:inline", document).tap do |inline|
+          # Set the inline properties
+          inline["distT"] = "0"
+          inline["distB"] = "0"
+          inline["distL"] = "0"
+          inline["distR"] = "0"
 
-          # Position nodes
-          anchor.children = create_position_nodes
-
-          # Size node
-          anchor << Nokogiri::XML::Node.new("wp:extent", document).tap do |extent|
+          # Size node (extent)
+          inline << Nokogiri::XML::Node.new("wp:extent", document).tap do |extent|
             extent["cx"] = scaled_width
             extent["cy"] = scaled_height
           end
 
           # Effect extent
-          anchor << create_effect_extent_node
-
-          # Wrap node
-          anchor << Nokogiri::XML::Node.new("wp:wrapSquare", document).tap do |wrap_square|
-            wrap_square["wrapText"] = "bothSides"
-          end
+          inline << create_effect_extent_node
 
           # Document properties
-          anchor << create_doc_properties_node
+          inline << create_doc_properties_node
 
           # Non-visual properties
-          anchor << create_non_visual_properties_node
+          inline << create_non_visual_properties_node
 
           # Graphic node
-          anchor << create_graphic_node(scaled_width, scaled_height)
+          inline << create_graphic_node(scaled_width, scaled_height)
         end
-      end
-
-      private def create_position_nodes
-        nodes = []
-
-        # Simple position
-        nodes << Nokogiri::XML::Node.new("wp:simplePos", document).tap do |pos|
-          pos["x"] = "0"
-          pos["y"] = "0"
-        end
-
-        # Horizontal position
-        nodes << Nokogiri::XML::Node.new("wp:positionH", document).tap do |posh|
-          posh["relativeFrom"] = "column"
-          posh << Nokogiri::XML::Node.new("wp:align", document).tap do |align|
-            align.content = "center"
-          end
-        end
-
-        # Vertical position
-        nodes << Nokogiri::XML::Node.new("wp:positionV", document).tap do |posv|
-          posv["relativeFrom"] = "paragraph"
-          posv << Nokogiri::XML::Node.new("wp:posOffset", document).tap do |offset|
-            offset.content = "0"
-          end
-        end
-
-        Nokogiri::XML::NodeSet.new(document, nodes)
       end
 
       private def create_effect_extent_node
