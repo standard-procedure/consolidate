@@ -66,7 +66,7 @@ module Consolidate
 
       def write_to path
         puts "...writing to #{path}" if verbose
-        Zip::File.open(path, Zip::File::CREATE) do |out|
+        Zip::File.open(path, create: true) do |out|
           @output[contents_xml] = @contents_xml.serialize save_with: 0
 
           @images.each do |field_name, image|
